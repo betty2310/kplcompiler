@@ -6,6 +6,7 @@
             "program": "${fileDirname}/main",
             "type": "lldb",
             "request": "launch",
+            "stopOnEntry": true,
             "args": [],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "gcc make"
