@@ -135,8 +135,10 @@ Token *getToken() {
         case 5:
             col = colNo - i;
             i = 0;
+            Token *res = makeToken(TK_IDENT, lineNo, col);
+            strcpy(res->string, str);
             memset(str, 0, sizeof(str));
-            return makeToken(TK_IDENT, lineNo, col);
+            return res;
         case 6:
             TokenType tp = checkKeyword(str);
             col = colNo - i;
@@ -147,14 +149,17 @@ Token *getToken() {
                 line = lineNo - 1;
                 col = 1;
             }
-            return makeToken(tp, lineNo, col);
+            return makeToken(tp, line, col);
         case 7:
+            // TODO: read number
             readChar();
             while (charCodes[currentChar] == CHAR_DIGIT) readChar();
             state = 8;
             return getToken();
         case 8:
-            return makeToken(TK_NUMBER, lineNo, colNo);
+            Token *tk_number = makeToken(TK_NUMBER, lineNo, colNo - i);
+            strcpy(tk_number->string, str);
+            return tk_number;
         case 9:
             readChar();
             return makeToken(SB_PLUS, lineNo, colNo - 1);
@@ -207,17 +212,13 @@ Token *getToken() {
             return makeToken(SB_COMMA, lineNo, colNo);
         case 24:
             readChar();
-            if (charCodes[currentChar] == CHAR_RPAR) {
-                state = 25;
-            } else {
-                state = 26;
-            }
-            getToken();
+            state = charCodes[currentChar] == CHAR_RPAR ? 25 : 26;
+            return getToken();
         case 25:
             readChar();
             return makeToken(SB_RSEL, lineNo, colNo - 1);
         case 26:
-            return makeToken(SB_PERIOD, lineNo, colNo);
+            return makeToken(SB_PERIOD, lineNo, colNo - 1);
         case 27:
             readChar();
             return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
@@ -229,7 +230,7 @@ Token *getToken() {
             readChar();
             return makeToken(SB_ASSIGN, lineNo, colNo - 1);
         case 30:
-            return makeToken(SB_COLON, lineNo, colNo);
+            return makeToken(SB_COLON, lineNo, colNo - 1);
         case 31:
             readChar();
             if (currentChar == EOF)
@@ -476,7 +477,7 @@ int scan(char *fileName) {
 }
 
 int main() {
-    if (scan("example2.kpl") == IO_ERROR) {
+    if (scan("example1.kpl") == IO_ERROR) {
         printf("Can\'t read input file!\n");
     }
     return 0;
