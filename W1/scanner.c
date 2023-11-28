@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "charcode.h"
 #include "error.h"
@@ -21,17 +22,20 @@ extern CharCode charCodes[];
 int state;
 int ln, cn;
 char str[MAX_IDENT_LEN];
+int i = 0;
+int col;
 char c;
 
 /**
- * @brief return token based on current character
+ * @brief
  *
  * @return Token*
  */
 Token *getToken() {
     Token *token;
-    printf("lineNo: %d, colNo: %d, currentChar: %c - %d\n", lineNo, colNo, currentChar,
-           charCodes[currentChar]);
+    // char c = (char) currentChar;
+    // printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c, currentChar,
+    //        state);
     switch (state) {
         case 0:
             if (currentChar == EOF)
@@ -101,45 +105,68 @@ Token *getToken() {
         case 1:
             return makeToken(TK_EOF, lineNo, colNo);
         case 2:
-            // TODO (Skip blanks)
-            return makeToken(TK_EOF, lineNo, colNo);
+            do {
+                readChar();
+            } while (charCodes[currentChar] == CHAR_SPACE && currentChar != EOF);
+            state = 0;
+            return getToken();
         case 3:
             // TODO Recognize Identifiers and keywords
-            return makeToken(TK_EOF, lineNo, colNo);
+            str[i] = currentChar;
+            i++;
+            readChar();
+            while (currentChar != EOF && (charCodes[currentChar] == CHAR_LETTER ||
+                                          charCodes[currentChar] == CHAR_DIGIT)) {
+                if (i < MAX_IDENT_LEN) {
+                    str[i] = currentChar;
+                    i++;
+                } else {
+                    printf("max size!");
+                }
+                readChar();
+            }
+            state = 4;
+            return getToken();
         case 4:
-            token->tokenType = checkKeyword(str);
-            if (token->tokenType == TK_NONE)
-                state = 5;
-            else
-                state = 6;
+            Token *t = makeToken(TK_NONE, lineNo, colNo);
+            t->tokenType = checkKeyword(str);
+            state = t->tokenType == TK_NONE ? 5 : 6;
             return getToken();
         case 5:
-            // TODO Identifiers
-            return makeToken(TK_EOF, lineNo, colNo);
+            col = colNo - i;
+            i = 0;
+            memset(str, 0, sizeof(str));
+            return makeToken(TK_IDENT, lineNo, col);
         case 6:
-            // TODO Keywords
-            return makeToken(TK_EOF, lineNo, colNo);
+            TokenType tp = checkKeyword(str);
+            col = colNo - i;
+            i = 0;
+            memset(str, 0, sizeof(str));
+            int line = lineNo;
+            if (currentChar == 10) {
+                line = lineNo - 1;
+                col = 1;
+            }
+            return makeToken(tp, lineNo, col);
         case 7:
-            // TODO  Numbers
-            return makeToken(TK_EOF, lineNo, colNo);
+            readChar();
+            while (charCodes[currentChar] == CHAR_DIGIT) readChar();
+            state = 8;
+            return getToken();
+        case 8:
+            return makeToken(TK_NUMBER, lineNo, colNo);
         case 9:
             readChar();
             return makeToken(SB_PLUS, lineNo, colNo - 1);
         case 10:
-            // TODO
-            return makeToken(TK_EOF, lineNo, colNo);
-
-            break;
+            readChar();
+            return makeToken(SB_MINUS, lineNo, colNo);
         case 11:
-            // TODO
-            return makeToken(TK_EOF, lineNo, colNo);
-
-            break;
+            readChar();
+            return makeToken(SB_TIMES, lineNo, colNo);
         case 12:
-            // TODO
-            return makeToken(TK_EOF, lineNo, colNo);
-
-            break;
+            readChar();
+            return makeToken(SB_SLASH, lineNo, colNo);
         case 13:
             readChar();
             if (charCodes[currentChar] == CHAR_EQ)
@@ -153,20 +180,21 @@ Token *getToken() {
         case 15:
             return makeToken(SB_LT, lineNo, colNo - 1);
         case 16:
-            // TODO
-            return makeToken(TK_EOF, lineNo, colNo);
+            readChar();
+            state = charCodes[currentChar] == CHAR_EQ ? 17 : 18;
+            return getToken();
         case 17:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_GE, lineNo, colNo - 1);
         case 18:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            return makeToken(SB_GT, lineNo, colNo - 1);
         case 19:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_EQ, lineNo, colNo);
         case 20:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            state = charCodes[currentChar] == CHAR_EQ ? 21 : 22;
+            return getToken();
         case 21:
             readChar();
             return makeToken(SB_NEQ, lineNo, colNo - 1);
@@ -175,29 +203,33 @@ Token *getToken() {
             error(ERR_INVALIDSYMBOL, token->lineNo, token->colNo);
             return token;
         case 23:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_COMMA, lineNo, colNo);
         case 24:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            if (charCodes[currentChar] == CHAR_RPAR) {
+                state = 25;
+            } else {
+                state = 26;
+            }
+            getToken();
         case 25:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_RSEL, lineNo, colNo - 1);
         case 26:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            return makeToken(SB_PERIOD, lineNo, colNo);
         case 27:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
         case 28:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            state = charCodes[currentChar] == CHAR_EQ ? 29 : 30;
+            return getToken();
         case 29:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_ASSIGN, lineNo, colNo - 1);
         case 30:
-            // TODO
-            return makeToken(TK_EOF, lineNo, colNo);
+            return makeToken(SB_COLON, lineNo, colNo);
         case 31:
             readChar();
             if (currentChar == EOF)
@@ -235,7 +267,7 @@ Token *getToken() {
                         state = 36;
                         break;
                     case CHAR_TIMES:
-                        state = 38;
+                        state = 37;
                         break;
                     default:
                         state = 41;
@@ -243,14 +275,28 @@ Token *getToken() {
             return getToken();
 
         case 36:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            return makeToken(SB_LSEL, lineNo, colNo);
         case 37:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            while (charCodes[currentChar] != CHAR_TIMES) {
+                state = 37;
+                readChar();
+            }
+            if (currentChar == EOF)
+                state = 40;
+            else
+                state = 38;
+
+            return getToken();
         case 38:
-            return makeToken(TK_EOF, lineNo, colNo);
-            // TODO
+            readChar();
+            while (charCodes[currentChar] == CHAR_TIMES) {
+                state = 38;
+                readChar();
+            }
+            state = charCodes[currentChar] == CHAR_RPAR ? 39 : 40;
+            return getToken();
         case 39:
             state = 0;
             readChar();
@@ -412,14 +458,15 @@ void printToken(Token *token) {
 
 int scan(char *fileName) {
     Token *token;
-
     if (openInputStream(fileName) == IO_ERROR)
         return IO_ERROR;
 
     token = getToken();
+
     while (token->tokenType != TK_EOF) {
         printToken(token);
         free(token);
+        state = 0;
         token = getToken();
     }
 

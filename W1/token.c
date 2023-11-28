@@ -7,6 +7,7 @@
 #include "token.h"
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 struct {
@@ -23,6 +24,13 @@ struct {
                               {"WHILE", KW_WHILE},       {"DO", KW_DO},
                               {"FOR", KW_FOR},           {"TO", KW_TO}};
 
+/**
+ * Compares a keyword with a string in a case-insensitive manner.
+ *
+ * @param kw The keyword to compare.
+ * @param string The string to compare against.
+ * @return 1 if the keyword and string are equal, 0 otherwise.
+ */
 int keywordEq(char *kw, char *string) {
     while ((*kw != '\0') && (*string != '\0')) {
         if (*kw != toupper(*string))
