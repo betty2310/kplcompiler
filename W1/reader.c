@@ -28,7 +28,7 @@ int openInputStream(char* filename) {
         printf("Khong thay");
         return IO_ERROR;
     } else
-        printf("Read file %s successfully\n", filename);
+        printf("Read file %s successfully! 🌱\n", filename);
 
     lineNo = 1;
     colNo = 0;

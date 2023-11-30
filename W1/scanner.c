@@ -22,20 +22,19 @@ extern CharCode charCodes[];
 int state;
 int ln, cn;
 char str[MAX_IDENT_LEN];
+char str_number[MAX_IDENT_LEN];
 int i = 0;
 int col;
 char c;
 
-/**
- * @brief
- *
- * @return Token*
- */
+void log_current_state() {
+    char c = (char) currentChar;
+    printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c, currentChar,
+           state);
+}
+
 Token *getToken() {
     Token *token;
-    // char c = (char) currentChar;
-    // printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c, currentChar,
-    //        state);
     switch (state) {
         case 0:
             if (currentChar == EOF)
@@ -152,13 +151,25 @@ Token *getToken() {
             return makeToken(tp, line, col);
         case 7:
             // TODO: read number
+            str[i] = currentChar;
+            i++;
             readChar();
-            while (charCodes[currentChar] == CHAR_DIGIT) readChar();
+            while (charCodes[currentChar] == CHAR_DIGIT) {
+                if (i < MAX_IDENT_LEN) {
+                    str[i] = currentChar;
+                    i++;
+                } else {
+                    printf("max size!");
+                }
+                readChar();
+            }
             state = 8;
             return getToken();
         case 8:
             Token *tk_number = makeToken(TK_NUMBER, lineNo, colNo - i);
             strcpy(tk_number->string, str);
+            memset(str, 0, sizeof(str));
+            i = 0;
             return tk_number;
         case 9:
             readChar();
@@ -220,8 +231,13 @@ Token *getToken() {
         case 26:
             return makeToken(SB_PERIOD, lineNo, colNo - 1);
         case 27:
+            int c = colNo;
             readChar();
-            return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
+            if (currentChar == 10) {   // newline, should be previous line
+                return makeToken(SB_SEMICOLON, lineNo - 1, c);
+            } else {
+                return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
+            }
         case 28:
             readChar();
             state = charCodes[currentChar] == CHAR_EQ ? 29 : 30;
