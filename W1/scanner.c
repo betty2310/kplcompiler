@@ -22,14 +22,17 @@ extern CharCode charCodes[];
 int state;
 int ln, cn;
 char str[MAX_IDENT_LEN];
-char str_number[MAX_IDENT_LEN];
+char str_number[100];
 int i = 0;
 int col;
 char c;
+int isIdentTooLong = 0;
+int isNumberTooLong = 0;
+int preColNo = 0;
 
 void log_current_state() {
-    char c = (char) currentChar;
-    printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c, currentChar,
+    char c_ = (char) currentChar;
+    printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c_, currentChar,
            state);
 }
 
@@ -120,7 +123,7 @@ Token *getToken() {
                     str[i] = currentChar;
                     i++;
                 } else {
-                    printf("max size!");
+                    isIdentTooLong = 1;
                 }
                 readChar();
             }
@@ -134,10 +137,18 @@ Token *getToken() {
         case 5:
             col = colNo - i;
             i = 0;
-            Token *res = makeToken(TK_IDENT, lineNo, col);
-            strcpy(res->string, str);
-            memset(str, 0, sizeof(str));
-            return res;
+            if (isIdentTooLong || strlen(str) > MAX_IDENT_LEN || strlen(str) == 0) {
+                error(ERR_IDENTTOOLONG, lineNo, col);
+                isIdentTooLong = 0;
+                state = 0;
+                memset(str, 0, sizeof(str));
+                return getToken();
+            } else {
+                Token *res = makeToken(TK_IDENT, lineNo, col);
+                strcpy(res->string, str);
+                memset(str, 0, sizeof(str));
+                return res;
+            }
         case 6:
             TokenType tp = checkKeyword(str);
             col = colNo - i;
@@ -150,27 +161,43 @@ Token *getToken() {
             }
             return makeToken(tp, line, col);
         case 7:
-            // TODO: read number
-            str[i] = currentChar;
-            i++;
+            int isZeroOnLeft = 0;
+            if (currentChar != '0') {
+                str_number[i] = currentChar;
+                isZeroOnLeft = 1;
+                i++;
+            }
             readChar();
             while (charCodes[currentChar] == CHAR_DIGIT) {
-                if (i < MAX_IDENT_LEN) {
-                    str[i] = currentChar;
+                if (currentChar != '0' || isZeroOnLeft) {
+                    isZeroOnLeft = 1;
+                    str_number[i] = currentChar;
                     i++;
-                } else {
-                    printf("max size!");
                 }
                 readChar();
             }
             state = 8;
             return getToken();
         case 8:
-            Token *tk_number = makeToken(TK_NUMBER, lineNo, colNo - i);
-            strcpy(tk_number->string, str);
-            memset(str, 0, sizeof(str));
-            i = 0;
-            return tk_number;
+            // convert str_number to int
+            long res = 0;
+            for (int j = 0; j < i; j++) {
+                res = res * 10 + (str_number[j] - '0');
+            }
+            if (res > INT_MAX) {
+                error(ERR_NUMBERTOOLONG, lineNo, colNo - i);
+                state = 0;
+                memset(str_number, 0, sizeof(str_number));
+                i = 0;
+                return getToken();
+            } else {
+                Token *tk_number = makeToken(TK_NUMBER, lineNo, colNo - i);
+                tk_number->value = (int) res;
+                strcpy(tk_number->string, str_number);
+                memset(str_number, 0, sizeof(str_number));
+                i = 0;
+                return tk_number;
+            }
         case 9:
             readChar();
             return makeToken(SB_PLUS, lineNo, colNo - 1);
@@ -231,10 +258,10 @@ Token *getToken() {
         case 26:
             return makeToken(SB_PERIOD, lineNo, colNo - 1);
         case 27:
-            int c = colNo;
+            int col_ = colNo;
             readChar();
             if (currentChar == 10) {   // newline, should be previous line
-                return makeToken(SB_SEMICOLON, lineNo - 1, c);
+                return makeToken(SB_SEMICOLON, lineNo - 1, col_);
             } else {
                 return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
             }
@@ -248,6 +275,7 @@ Token *getToken() {
         case 30:
             return makeToken(SB_COLON, lineNo, colNo - 1);
         case 31:
+            preColNo = colNo;
             readChar();
             if (currentChar == EOF)
                 state = 34;
@@ -258,6 +286,7 @@ Token *getToken() {
             return getToken();
         case 32:
             c = currentChar;
+            preColNo = colNo;
             readChar();
             if (charCodes[currentChar] == CHAR_SINGLEQUOTE)
                 state = 33;
@@ -271,7 +300,13 @@ Token *getToken() {
             readChar();
             return token;
         case 34:
-            error(ERR_INVALIDCHARCONSTANT, lineNo, colNo - 2);
+            if (currentChar == 10) {
+                error(ERR_INVALIDCHARCONSTANT, lineNo - 1, preColNo - 1);
+            } else {
+                error(ERR_INVALIDCHARCONSTANT, lineNo, colNo - 2);
+            }
+            state = 0;
+            return getToken();
         case 35:   // tokens begin with lpar, skip comments
             ln = lineNo;
             cn = colNo;
@@ -296,7 +331,7 @@ Token *getToken() {
             return makeToken(SB_LSEL, lineNo, colNo);
         case 37:
             readChar();
-            while (charCodes[currentChar] != CHAR_TIMES) {
+            while (charCodes[currentChar] != CHAR_TIMES && currentChar != EOF) {
                 state = 37;
                 readChar();
             }
@@ -312,14 +347,22 @@ Token *getToken() {
                 state = 38;
                 readChar();
             }
-            state = charCodes[currentChar] == CHAR_RPAR ? 39 : 40;
+            if (currentChar == EOF) {
+                state = 40;
+            } else if (charCodes[currentChar] == CHAR_RPAR) {
+                state = 39;
+            } else {
+                state = 37;
+            }
             return getToken();
         case 39:
-            state = 0;
             readChar();
+            state = 0;
             return getToken();
         case 40:
             error(ERR_ENDOFCOMMENT, lineNo, colNo);
+            state = 0;
+            return getToken();
         case 41:
             return makeToken(SB_LPAR, ln, cn);
         case 42:
