@@ -11,6 +11,6 @@
 
 Token* getToken(void);
 Token* getValidToken(void);
-void printToken(Token *token);
+void printToken(Token* token);
 
 #endif
