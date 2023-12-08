@@ -19,7 +19,7 @@ int readChar(void) {
         lineNo++;
         colNo = 0;
     }
-    // printf("\n%c",currentChar);
+    // printf("\n%c", currentChar);
     return currentChar;
 }
 

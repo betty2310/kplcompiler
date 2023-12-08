@@ -122,11 +122,9 @@ Token *getToken(void) {
             return getToken();
         }
         case 4:
-            token->tokenType = checkKeyword(str);
-            if (token->tokenType == TK_NONE)
-                state = 5;
-            else
-                state = 6;
+            Token *t = makeToken(TK_NONE, lineNo, colNo);
+            t->tokenType = checkKeyword(str);
+            state = t->tokenType == TK_NONE ? 5 : 6;
             return getToken();
         case 5:
             // printf("\n****%s",str);
