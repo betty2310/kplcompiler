@@ -26,8 +26,11 @@ void eat(TokenType tokenType) {
     if (lookAhead->tokenType == tokenType) {
         printToken(lookAhead);
         scan();
-    } else
+    } else {
+        printf("look ahead: %s \t token type: %s\n", tokenToString(lookAhead->tokenType),
+               tokenToString(tokenType));
         missingToken(tokenType, lookAhead->lineNo, lookAhead->colNo);
+    }
 }
 
 void compileProgram(void) {
@@ -272,7 +275,7 @@ void compileParams(void) {
     // DONE
     if (lookAhead->tokenType == SB_LPAR) {
         eat(SB_LPAR);
-        compileParams();
+        compileParam();
         compileParams2();
         eat(SB_RPAR);
     }
