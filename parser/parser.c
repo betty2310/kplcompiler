@@ -27,8 +27,6 @@ void eat(TokenType tokenType) {
         printToken(lookAhead);
         scan();
     } else {
-        printf("look ahead: %s \t token type: %s\n", tokenToString(lookAhead->tokenType),
-               tokenToString(tokenType));
         missingToken(tokenType, lookAhead->lineNo, lookAhead->colNo);
     }
 }
@@ -552,47 +550,25 @@ void compileExpression3(void) {
 
 void compileTerm(void) {
     compileFactor();
-    compileTerm2();
-}
-
-void compileTerm2(void) {
-    switch (lookAhead->tokenType) {
-        case SB_TIMES:
-            eat(SB_TIMES);
-            compileFactor();
-            compileTerm2();
-            break;
-        case SB_SLASH:
-            eat(SB_SLASH);
-            compileFactor();
-            compileTerm2();
-            break;
-            // check the FOLLOW set
-        case SB_PLUS:
-        case SB_MINUS:
-        case KW_TO:
-        case KW_DO:
-        case SB_RPAR:
-        case SB_COMMA:
-        case SB_EQ:
-        case SB_NEQ:
-        case SB_LE:
-        case SB_LT:
-        case SB_GE:
-        case SB_GT:
-        case SB_RSEL:
-        case SB_SEMICOLON:
-        case KW_END:
-        case KW_ELSE:
-        case KW_THEN:
-            break;
-        default:
-            error(ERR_INVALIDTERM, lookAhead->lineNo, lookAhead->colNo);
+    while (lookAhead->tokenType == SB_TIMES || lookAhead->tokenType == SB_SLASH) {
+        switch (lookAhead->tokenType) {
+            case SB_TIMES:
+                eat(SB_TIMES);
+                compileFactor();
+                break;
+            case SB_SLASH:
+                eat(SB_SLASH);
+                compileFactor();
+                break;
+            default:
+                break;
+        }
     }
 }
 
 void compileFactor(void) {
     // TODO
+    // DONE
     switch (lookAhead->tokenType) {
         case TK_NUMBER:
             eat(TK_NUMBER);
