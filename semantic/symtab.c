@@ -37,7 +37,11 @@ Type* makeCharType(void) {
 
 Type* makeArrayType(int arraySize, Type* elementType) {
     // TODO
+    // DONE
     Type* type = (Type*) malloc(sizeof(Type));
+    type->typeClass = TP_ARRAY;
+    type->arraySize = arraySize;
+    type->elementType = elementType;
     return type;
 }
 
@@ -95,6 +99,14 @@ ConstantValue* makeCharConstant(char ch) {
 
 ConstantValue* duplicateConstantValue(ConstantValue* v) {
     // TODO
+    // DONE
+    ConstantValue* res = (ConstantValue*) malloc(sizeof(ConstantValue));
+    res->type = v->type;
+    if (v->type == TP_INT)
+        res->intValue = v->intValue;
+    else
+        res->charValue = v->charValue;
+    return res;
 }
 
 /******************* Object utilities ******************************/
@@ -128,6 +140,12 @@ Object* createConstantObject(char* name) {
 
 Object* createTypeObject(char* name) {
     // TODO
+    // DONE
+    Object* obj = (Object*) malloc(sizeof(Object));
+    strcpy(obj->name, name);
+    obj->kind = OBJ_TYPE;
+    obj->typeAttrs = (TypeAttributes*) malloc(sizeof(TypeAttributes));
+    return obj;
 }
 
 Object* createVariableObject(char* name) {
@@ -151,10 +169,26 @@ Object* createFunctionObject(char* name) {
 
 Object* createProcedureObject(char* name) {
     // TODO
+    // DONE
+    Object* obj = (Object*) malloc(sizeof(Object));
+    strcpy(obj->name, name);
+    obj->kind = OBJ_PROCEDURE;
+    obj->procAttrs = (ProcedureAttributes*) malloc(sizeof(ProcedureAttributes));
+    obj->procAttrs->paramList = NULL;
+    obj->procAttrs->scope = createScope(obj, symtab->currentScope);
+    return obj;
 }
 
 Object* createParameterObject(char* name, enum ParamKind kind, Object* owner) {
     // TODO
+    // DONE
+    Object* obj = (Object*) malloc(sizeof(Object));
+    strcpy(obj->name, name);
+    obj->kind = OBJ_PARAMETER;
+    obj->paramAttrs = (ParameterAttributes*) malloc(sizeof(ParameterAttributes));
+    obj->paramAttrs->kind = kind;
+    obj->paramAttrs->function = owner;
+    return obj;
 }
 
 void freeObject(Object* obj) {

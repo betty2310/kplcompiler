@@ -28,7 +28,6 @@ int idx;
 
 Token *getToken(void) {
     Token *token;
-    printf("\n%d\n", state);
     switch (state) {
         case 0:
             if (currentChar == EOF)
@@ -123,16 +122,13 @@ Token *getToken(void) {
             return getToken();
         }
         case 4:
-
-            if (checkKeyword(str) == TK_NONE)
-                state = 5;
-            else
-                state = 6;
+            Token *t = makeToken(TK_NONE, lineNo, colNo);
+            t->tokenType = checkKeyword(str);
+            state = t->tokenType == TK_NONE ? 5 : 6;
             return getToken();
         case 5:
             token = makeToken(TK_IDENT, ln, cn);
             strcpy(token->string, str);
-            printf("\n%s............\n", token->string);
             return token;
         case 6:
             token = makeToken(checkKeyword(str), ln, cn);

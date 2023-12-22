@@ -25,7 +25,7 @@ struct {
 
 int keywordEq(char *kw, char *string) {
     while ((*kw != '\0') && (*string != '\0')) {
-        if (*kw != *string)
+        if (*kw != toupper(*string))
             break;
         kw++;
         string++;
@@ -36,8 +36,9 @@ int keywordEq(char *kw, char *string) {
 TokenType checkKeyword(char *string) {
     int i;
     for (i = 0; i < KEYWORDS_COUNT; i++)
-        if (keywordEq(keywords[i].string, string))
+        if (keywordEq(keywords[i].string, string)) {
             return keywords[i].tokenType;
+        }
     return TK_NONE;
 }
 

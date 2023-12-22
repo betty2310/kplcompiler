@@ -41,7 +41,7 @@ struct ErrorMessage errors[29] = {
     {ERR_UNDECLARED_INT_CONSTANT, "Undeclared integer constant."},
     {ERR_UNDECLARED_TYPE, "Undeclared type."},
     {ERR_UNDECLARED_VARIABLE, "Undeclared variable."},
-    {ERR_UNDECLARED_FUNCTION, "Undeclared function."},
+    {ERR_INVALID_RETURN, "Expect the owner of the current scope."},
     {ERR_UNDECLARED_PROCEDURE, "Undeclared procedure."},
     {ERR_DUPLICATE_IDENT, "Duplicate identifier."},
     {ERR_TYPE_INCONSISTENCY, "Type inconsistency"},
