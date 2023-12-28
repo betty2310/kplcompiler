@@ -439,6 +439,7 @@ void compileLValue(void) {
             break;
         case OBJ_FUNCTION:
             // TODO
+
             break;
         default:
             error(ERR_INVALID_LVALUE, currentToken->lineNo, currentToken->colNo);
