@@ -834,7 +834,6 @@ int compile(char* fileName) {
     if (openInputStream(fileName) == IO_ERROR)
         return IO_ERROR;
 
-    printf("Ok\n");
     currentToken = NULL;
     lookAhead = getValidToken();
 

@@ -1,5 +1,6 @@
 /* Scanner
  * @copyright (c) 2008, Hedspi, Hanoi University of Technology
+ * @version 1.0
  */
 
 #include <ctype.h>
@@ -17,27 +18,16 @@
 extern int lineNo;
 extern int colNo;
 extern int currentChar;
-
 extern CharCode charCodes[];
 int state;
 int ln, cn;
 char str[MAX_IDENT_LEN];
-char str_number[100];
-int i = 0;
-int col;
 char c;
-int isIdentTooLong = 0;
-int isNumberTooLong = 0;
-int preColNo = 0;
+/***************************************************************/
 
-void log_current_state() {
-    char c_ = (char) currentChar;
-    printf("[ln %d, col %d] charcode: '%c' - %d\tstate: %d\n", lineNo, colNo, c_, currentChar,
-           state);
-}
-
-Token *getToken() {
+Token *getToken(void) {
     Token *token;
+
     switch (state) {
         case 0:
             if (currentChar == EOF)
@@ -107,97 +97,83 @@ Token *getToken() {
         case 1:
             return makeToken(TK_EOF, lineNo, colNo);
         case 2:
-            do {
-                readChar();
-            } while (charCodes[currentChar] == CHAR_SPACE && currentChar != EOF);
+            readChar();
             state = 0;
             return getToken();
-        case 3:
-            // TODO Recognize Identifiers and keywords
-            str[i] = currentChar;
-            i++;
+        case 3: {
+            ln - lineNo;
+            cn = colNo;
+            int count = 1;
+            str[0] = (char) currentChar;
             readChar();
-            while (currentChar != EOF && (charCodes[currentChar] == CHAR_LETTER ||
-                                          charCodes[currentChar] == CHAR_DIGIT)) {
-                if (i < MAX_IDENT_LEN) {
-                    str[i] = currentChar;
-                    i++;
-                } else {
-                    isIdentTooLong = 1;
+            while ((currentChar != EOF) && ((charCodes[currentChar] == CHAR_LETTER) ||
+                                            (charCodes[currentChar] == CHAR_DIGIT))) {
+                if (count <= MAX_IDENT_LEN) {
+                    str[count++] = (char) currentChar;
                 }
                 readChar();
             }
+            if (count > MAX_IDENT_LEN) {
+                error(ERR_IDENTTOOLONG, ln, cn);
+                return makeToken(TK_NONE, ln, cn);
+            }
+            str[count] = '\0';
             state = 4;
             return getToken();
+        }
         case 4:
             Token *t = makeToken(TK_NONE, lineNo, colNo);
             t->tokenType = checkKeyword(str);
             state = t->tokenType == TK_NONE ? 5 : 6;
             return getToken();
         case 5:
-            col = colNo - i;
-            i = 0;
-            if (isIdentTooLong || strlen(str) > MAX_IDENT_LEN || strlen(str) == 0) {
-                error(ERR_IDENTTOOLONG, lineNo, col);
-                isIdentTooLong = 0;
-                state = 0;
-                memset(str, 0, sizeof(str));
-                return getToken();
-            } else {
-                Token *res = makeToken(TK_IDENT, lineNo, col);
-                strcpy(res->string, str);
-                memset(str, 0, sizeof(str));
-                return res;
-            }
+            // printf("\n****%s",str);
+            token = makeToken(TK_IDENT, ln, cn);
+            strcpy(token->string, str);
+            return token;
         case 6:
-            TokenType tp = checkKeyword(str);
-            col = colNo - i;
-            i = 0;
-            memset(str, 0, sizeof(str));
-            int line = lineNo;
-            if (currentChar == 10) {
-                line = lineNo - 1;
-                col = 1;
-            }
-            return makeToken(tp, line, col);
+            token = makeToken(checkKeyword(str), ln, cn);
+            return token;
         case 7:
-            int isZeroOnLeft = 0;
-            if (currentChar != '0') {
-                str_number[i] = currentChar;
-                isZeroOnLeft = 1;
-                i++;
-            }
-            readChar();
-            while (charCodes[currentChar] == CHAR_DIGIT) {
-                if (currentChar != '0' || isZeroOnLeft) {
-                    isZeroOnLeft = 1;
-                    str_number[i] = currentChar;
-                    i++;
+            token = makeToken(TK_NONE, lineNo, colNo);
+            int idx = 0;
+            char string[11];
+            ln = lineNo;
+            cn = colNo;
+            while (currentChar == '0') readChar();
+            while (currentChar != EOF && charCodes[currentChar] == CHAR_DIGIT) {
+                if (idx >= 10) {
+                    while (currentChar != EOF && charCodes[currentChar] == CHAR_DIGIT) {
+                        idx++;
+                        readChar();
+                    }
+                    error(ERR_NUMBERTOOLONG, ln, cn);
+                    return token;
+                    break;
                 }
+                string[idx] = currentChar;
+                idx++;
                 readChar();
             }
-            state = 8;
-            return getToken();
-        case 8:
-            // convert str_number to int
-            long res = 0;
-            for (int j = 0; j < i; j++) {
-                res = res * 10 + (str_number[j] - '0');
+            if (idx == 0) {
+                token->tokenType = TK_NUMBER;
+                token->value = 0;
+                token->string[0] = '0';
+                token->string[1] = '\0';
+                return token;
             }
-            if (res > INT_MAX) {
-                error(ERR_NUMBERTOOLONG, lineNo, colNo - i);
-                state = 0;
-                memset(str_number, 0, sizeof(str_number));
-                i = 0;
-                return getToken();
-            } else {
-                Token *tk_number = makeToken(TK_NUMBER, lineNo, colNo - i);
-                tk_number->value = (int) res;
-                strcpy(tk_number->string, str_number);
-                memset(str_number, 0, sizeof(str_number));
-                i = 0;
-                return tk_number;
+
+            string[idx] = '\0';
+            char strNumber[11];
+            sprintf(strNumber, "%d", INT_MAX);
+            if (strlen(string) == strlen(strNumber) && strcmp(string, strNumber) > 0) {
+                error(ERR_NUMBERTOOLONG, ln, cn);
+                return token;
             }
+            token->tokenType = TK_NUMBER;
+            strcpy(token->string, string);
+            token->value = atoi(string);
+            return token;
         case 9:
             readChar();
             return makeToken(SB_PLUS, lineNo, colNo - 1);
@@ -224,7 +200,10 @@ Token *getToken() {
             return makeToken(SB_LT, lineNo, colNo - 1);
         case 16:
             readChar();
-            state = charCodes[currentChar] == CHAR_EQ ? 17 : 18;
+            if ((currentChar != EOF) && (charCodes[currentChar] == CHAR_EQ))
+                state = 17;
+            else
+                state = 18;
             return getToken();
         case 17:
             readChar();
@@ -236,7 +215,10 @@ Token *getToken() {
             return makeToken(SB_EQ, lineNo, colNo);
         case 20:
             readChar();
-            state = charCodes[currentChar] == CHAR_EQ ? 21 : 22;
+            if ((currentChar != EOF) && (charCodes[currentChar] == CHAR_EQ))
+                state = 21;
+            else
+                state = 22;
             return getToken();
         case 21:
             readChar();
@@ -250,24 +232,26 @@ Token *getToken() {
             return makeToken(SB_COMMA, lineNo, colNo);
         case 24:
             readChar();
-            state = charCodes[currentChar] == CHAR_RPAR ? 25 : 26;
+            if ((currentChar != EOF) && (charCodes[currentChar] == CHAR_RPAR))
+                state = 25;
+            else
+                state = 26;
             return getToken();
         case 25:
             readChar();
             return makeToken(SB_RSEL, lineNo, colNo - 1);
         case 26:
+            readChar();
             return makeToken(SB_PERIOD, lineNo, colNo - 1);
         case 27:
-            int col_ = colNo;
             readChar();
-            if (currentChar == 10) {   // newline, should be previous line
-                return makeToken(SB_SEMICOLON, lineNo - 1, col_);
-            } else {
-                return makeToken(SB_SEMICOLON, lineNo, colNo - 1);
-            }
+            return makeToken(SB_SEMICOLON, lineNo, colNo);
         case 28:
             readChar();
-            state = charCodes[currentChar] == CHAR_EQ ? 29 : 30;
+            if ((currentChar != EOF) && (charCodes[currentChar] == CHAR_EQ))
+                state = 29;
+            else
+                state = 30;
             return getToken();
         case 29:
             readChar();
@@ -275,7 +259,6 @@ Token *getToken() {
         case 30:
             return makeToken(SB_COLON, lineNo, colNo - 1);
         case 31:
-            preColNo = colNo;
             readChar();
             if (currentChar == EOF)
                 state = 34;
@@ -286,7 +269,6 @@ Token *getToken() {
             return getToken();
         case 32:
             c = currentChar;
-            preColNo = colNo;
             readChar();
             if (charCodes[currentChar] == CHAR_SINGLEQUOTE)
                 state = 33;
@@ -300,14 +282,8 @@ Token *getToken() {
             readChar();
             return token;
         case 34:
-            if (currentChar == 10) {
-                error(ERR_INVALIDCHARCONSTANT, lineNo - 1, preColNo - 1);
-            } else {
-                error(ERR_INVALIDCHARCONSTANT, lineNo, colNo - 2);
-            }
-            state = 0;
-            return getToken();
-        case 35:   // tokens begin with lpar, skip comments
+            error(ERR_INVALIDCHARCONSTANT, lineNo, colNo - 2);
+        case 35:
             ln = lineNo;
             cn = colNo;
             readChar();
@@ -319,19 +295,17 @@ Token *getToken() {
                         state = 36;
                         break;
                     case CHAR_TIMES:
-                        state = 37;
+                        state = 38;
                         break;
                     default:
                         state = 41;
                 }
             return getToken();
-
         case 36:
             readChar();
-            return makeToken(SB_LSEL, lineNo, colNo);
+            return makeToken(SB_LSEL, ln, cn);
         case 37:
-            readChar();
-            while (charCodes[currentChar] != CHAR_TIMES && currentChar != EOF) {
+            while ((currentChar != EOF) && (charCodes[currentChar] != CHAR_TIMES)) {
                 state = 37;
                 readChar();
             }
@@ -339,30 +313,25 @@ Token *getToken() {
                 state = 40;
             else
                 state = 38;
-
             return getToken();
         case 38:
-            readChar();
-            while (charCodes[currentChar] == CHAR_TIMES) {
+            while ((currentChar != EOF) && (charCodes[currentChar] == CHAR_TIMES)) {
                 state = 38;
                 readChar();
             }
-            if (currentChar == EOF) {
+            if (currentChar == EOF)
                 state = 40;
-            } else if (charCodes[currentChar] == CHAR_RPAR) {
+            else if (charCodes[currentChar] == CHAR_RPAR)
                 state = 39;
-            } else {
+            else
                 state = 37;
-            }
             return getToken();
         case 39:
-            readChar();
             state = 0;
+            readChar();
             return getToken();
         case 40:
             error(ERR_ENDOFCOMMENT, lineNo, colNo);
-            state = 0;
-            return getToken();
         case 41:
             return makeToken(SB_LPAR, ln, cn);
         case 42:
@@ -375,6 +344,19 @@ Token *getToken() {
             return token;
     }
 }
+
+Token *getValidToken(void) {
+    state = 0;
+    Token *token = getToken();
+
+    while (token->tokenType == TK_NONE) {
+        free(token);
+        token = getToken();
+    }
+    return token;
+}
+
+/******************************************************************/
 
 void printToken(Token *token) {
     printf("%d-%d:", token->lineNo, token->colNo);
@@ -456,6 +438,7 @@ void printToken(Token *token) {
         case KW_TO:
             printf("KW_TO\n");
             break;
+
         case SB_SEMICOLON:
             printf("SB_SEMICOLON\n");
             break;
@@ -535,8 +518,12 @@ int scan(char *fileName) {
     return IO_SUCCESS;
 }
 
-int main() {
-    if (scan("example2.kpl") == IO_ERROR) {
+int main(int argc, char *argv[]) {
+    if (argc <= 1) {
+        printf("scanner: no input file.\n");
+        return -1;
+    }
+    if (scan(argv[1]) == IO_ERROR) {
         printf("Can\'t read input file!\n");
     }
     return 0;

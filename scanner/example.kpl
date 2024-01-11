@@ -1,0 +1,7 @@
+Program Example;
+
+Var B : Char;
+
+Begin
+    B := 'A';
+End.

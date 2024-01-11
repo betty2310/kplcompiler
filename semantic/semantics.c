@@ -96,7 +96,7 @@ Object* checkDeclaredLValueIdent(char* name) {
                 error(ERR_INVALID_IDENT, currentToken->lineNo, currentToken->colNo);
             break;
         default:
-            error(ERR_INVALID_IDENT, currentToken->lineNo, currentToken->colNo);
+            error(ERR_INVALID_RETURN, currentToken->lineNo, currentToken->colNo);
     }
     return obj;
 }

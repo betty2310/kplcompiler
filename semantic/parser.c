@@ -245,10 +245,18 @@ ConstantValue* compileConstant(void) {
         case SB_PLUS:
             eat(SB_PLUS);
             constValue = compileConstant2();
+            if (constValue->type == TP_INT)
+                constValue->intValue = +constValue->intValue;
+            else
+                error(ERR_UNDECLARED_INT_CONSTANT, currentToken->lineNo, currentToken->colNo);
             break;
         case SB_MINUS:
             eat(SB_MINUS);
             constValue = compileConstant2();
+            if (constValue->type == TP_INT) {
+            } else {
+                error(ERR_UNDECLARED_INT_CONSTANT, currentToken->lineNo, currentToken->colNo);
+            }
             constValue->intValue = -constValue->intValue;
             break;
         case TK_CHAR:
@@ -428,7 +436,6 @@ void compileStatement(void) {
 
 void compileLValue(void) {
     Object* var;
-
     eat(TK_IDENT);
     // check if the identifier is a function identifier, or a variable identifier, or a parameter
     var = checkDeclaredLValueIdent(currentToken->string);
