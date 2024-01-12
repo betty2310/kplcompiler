@@ -269,6 +269,18 @@ Token *getToken(void) {
             return getToken();
         case 32:
             c = currentChar;
+            if (charCodes[currentChar] == CHAR_BACKSLASH) {
+                readChar();
+                if (currentChar == EOF)
+                    state = 34;
+                else if (charCodes[currentChar] == CHAR_SINGLEQUOTE ||
+                         charCodes[currentChar] == CHAR_DOUBLEQUOTE ||
+                         charCodes[currentChar] == CHAR_BACKSLASH) {
+                    c = currentChar;
+                    state = 33;
+                } else
+                    state = 34;
+            }
             readChar();
             if (charCodes[currentChar] == CHAR_SINGLEQUOTE)
                 state = 33;

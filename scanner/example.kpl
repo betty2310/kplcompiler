@@ -1,7 +1,6 @@
 Program Example;
 
-Var B : Char;
+Const A = '\';
 
 Begin
-    B := 'A';
 End.
